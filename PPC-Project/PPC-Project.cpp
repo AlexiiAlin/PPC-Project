@@ -386,6 +386,21 @@ int Find_min_dist(int loc_dist[], int loc_known[], int loc_n) {
 	return loc_u;
 }
 
+int Find_max_dist(int loc_dist[], int loc_known[], int loc_n) {
+	int loc_u = -1, loc_v;
+	int max_dist = -1;
+
+	for (loc_v = 0; loc_v < loc_n; loc_v++) {
+		if (!loc_known[loc_v]) {
+			if (loc_dist[loc_v] > max_dist) {
+				max_dist = loc_dist[loc_v];
+				loc_u = loc_v;
+			}
+		}
+	}
+	return loc_u;
+}
+
 void Print_matrix(int global_mat[], int n) {
 	int i, j;
 
