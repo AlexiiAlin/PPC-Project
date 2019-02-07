@@ -63,7 +63,7 @@ void Read_matrix(int M[], int loc_mat[], int n, int loc_n, MPI_Datatype blk_col_
 void Dijkstra_Init(int loc_mat[], int loc_pred[], int loc_dist[], int loc_known[],
 	int my_rank, int loc_n);
 void Dijkstra(int loc_mat[], int loc_dist[], int loc_pred[], int loc_n, int n,
-	MPI_Comm comm);
+	MPI_Comm comm, bool isMin);
 int Find_min_dist(int loc_dist[], int loc_known[], int loc_n);
 void Print_matrix(int global_mat[], int n);
 void Print_dists(int global_dist[], int n);
@@ -228,7 +228,7 @@ int main() {
 		global_pred = (int *)malloc(n * sizeof(int));
 	}
 	Read_matrix(M, loc_mat, n, loc_n, blk_col_mpi_t, my_rank, comm);
-	Dijkstra(loc_mat, loc_dist, loc_pred, loc_n, n, comm);
+	Dijkstra(loc_mat, loc_dist, loc_pred, loc_n, n, comm,true);
 
 	/* Gather the results from Dijkstra */
 	MPI_Gather(loc_dist, loc_n, MPI_INT, global_dist, loc_n, MPI_INT, 0, comm);
@@ -317,7 +317,7 @@ void Dijkstra_Init(int loc_mat[], int loc_pred[], int loc_dist[], int loc_known[
 }
 
 void Dijkstra(int loc_mat[], int loc_dist[], int loc_pred[], int loc_n, int n,
-	MPI_Comm comm) {
+	MPI_Comm comm, bool isMin) {
 
 	int i, loc_v, loc_u, glbl_u, new_dist, my_rank, dist_glbl_u;
 	int *loc_known;
@@ -332,7 +332,12 @@ void Dijkstra(int loc_mat[], int loc_dist[], int loc_pred[], int loc_n, int n,
 	/* Run loop n - 1 times since we already know the shortest path to global
 	   vertex 0 from global vertex 0 */
 	for (i = 0; i < n - 1; i++) {
-		loc_u = Find_min_dist(loc_dist, loc_known, loc_n);
+		if(isMin) {
+			loc_u = Find_min_dist(loc_dist, loc_known, loc_n);
+		} else {
+			loc_u = Find_max_dist(loc_dist, loc_known, loc_n);
+		}
+		
 
 		if (loc_u != -1) {
 			my_min[0] = loc_dist[loc_u];
@@ -361,10 +366,18 @@ void Dijkstra(int loc_mat[], int loc_dist[], int loc_pred[], int loc_n, int n,
 		for (loc_v = 0; loc_v < loc_n; loc_v++) {
 			if (!loc_known[loc_v]) {
 				new_dist = dist_glbl_u + loc_mat[glbl_u * loc_n + loc_v];
-				if (new_dist < loc_dist[loc_v]) {
+				if(isMin) {
+					if (new_dist < loc_dist[loc_v]) {
 					loc_dist[loc_v] = new_dist;
 					loc_pred[loc_v] = glbl_u;
 				}
+				} else {
+					if (new_dist > loc_dist[loc_v]) {
+					loc_dist[loc_v] = new_dist;
+					loc_pred[loc_v] = glbl_u;
+				}
+				}
+				
 			}
 		}
 	}
